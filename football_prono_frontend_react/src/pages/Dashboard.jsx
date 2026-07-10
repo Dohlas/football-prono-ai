@@ -189,7 +189,45 @@ export default function Dashboard() {
             <div className="card-tactical">
               <div className="card-header-tech">
                 <div className="card-title-tech">Lancement par URL</div>
-                <span style={{ fontSize: "10px", color: "var(--text-silver)" }}>[SOURCE: 365SCORES]</span>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span style={{
+                    fontSize: "10px",
+                    fontFamily: "var(--font-title)",
+                    textTransform: "uppercase",
+                    backgroundColor: "#000000",
+                    color: "var(--neon-green)",
+                    border: "1px solid var(--neon-green)",
+                    padding: "3px 8px",
+                    borderRadius: "4px",
+                    boxShadow: "0 0 8px rgba(34, 197, 94, 0.25)",
+                    fontWeight: "bold",
+                    letterSpacing: "0.5px"
+                  }}>
+                    Source: 365Scores
+                  </span>
+                  <a 
+                    href="https://www.365scores.com/" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    style={{
+                      fontSize: "10px",
+                      backgroundColor: "#ffffff",
+                      color: "#000000",
+                      padding: "3px 8px",
+                      borderRadius: "4px",
+                      textDecoration: "none",
+                      fontWeight: 600,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      transition: "opacity 0.2s, transform 0.1s",
+                      cursor: "pointer"
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.opacity = 0.9}
+                    onMouseLeave={(e) => e.currentTarget.style.opacity = 1}
+                  >
+                    Visiter le site →
+                  </a>
+                </div>
               </div>
               <p style={{ fontSize: "13px", marginBottom: "16px" }}>
                 Collez l'URL d'un match 365Scores. On agrège instantanément les stats de forme et on génère votre modélisation quantitative — sans biais, sans émotion.
