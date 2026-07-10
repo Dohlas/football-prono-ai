@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { ShieldCheck, Cpu, BarChart3, ChevronRight, Zap } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import TeamLogo from "../components/TeamLogo";
 
 export default function Landing() {
   const { isAuthenticated } = useAuth();
@@ -126,8 +127,21 @@ export default function Landing() {
               background: "linear-gradient(to bottom, rgba(30, 35, 48, 0.4), transparent)"
             }}>
               <div className="flex-between" style={{ marginBottom: "16px" }}>
-                <span style={{ fontFamily: "monospace", fontSize: "11px", color: "var(--neon-green)" }}>
-                  [SIMULATION TECHNIQUE INTERACTIVE]
+                <span style={{
+                  fontFamily: "var(--font-title)",
+                  fontSize: "10px",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
+                  color: "var(--neon-green)",
+                  border: "1px solid rgba(204, 255, 0, 0.2)",
+                  padding: "4px 10px",
+                  borderRadius: "4px",
+                  backgroundColor: "rgba(204, 255, 0, 0.05)",
+                  boxShadow: "0 0 10px rgba(204, 255, 0, 0.15)",
+                  display: "inline-block"
+                }}>
+                  Simulation Technique Interactive
                 </span>
                 <span style={{ 
                   display: "flex", 
@@ -140,9 +154,10 @@ export default function Landing() {
                   <Zap size={14} fill="var(--neon-green)" /> 84% de Confiance
                 </span>
               </div>
-              <div className="flex-between" style={{ justifyContent: "space-around", textAlign: "center" }}>
-                <div style={{ width: "40%" }}>
-                  <h3 style={{ fontSize: "20px" }}>Real Madrid</h3>
+              <div className="flex-between" style={{ justifyContent: "space-around", textAlign: "center", alignItems: "center" }}>
+                <div style={{ width: "40%", display: "flex", flexDirection: "column", alignItems: "center" }}>
+                  <TeamLogo teamName="Allemagne" size={48} style={{ marginBottom: "8px" }} />
+                  <h3 style={{ fontSize: "20px" }}>Allemagne</h3>
                   <span style={{ fontSize: "11px", color: "var(--text-silver)" }}>Domicile</span>
                 </div>
                 <div style={{ 
@@ -153,12 +168,14 @@ export default function Landing() {
                   border: "1px solid var(--border-color)",
                   padding: "4px 16px",
                   borderRadius: "4px",
-                  backgroundColor: "rgba(8, 10, 15, 0.6)"
+                  backgroundColor: "rgba(8, 10, 15, 0.6)",
+                  boxShadow: "0 0 12px rgba(204, 255, 0, 0.1)"
                 }}>
                   2 - 1
                 </div>
-                <div style={{ width: "40%" }}>
-                  <h3 style={{ fontSize: "20px" }}>Bayern Munich</h3>
+                <div style={{ width: "40%", display: "flex", flexDirection: "column", alignItems: "center" }}>
+                  <TeamLogo teamName="Côte d'Ivoire" size={48} style={{ marginBottom: "8px" }} />
+                  <h3 style={{ fontSize: "20px" }}>Côte d'Ivoire</h3>
                   <span style={{ fontSize: "11px", color: "var(--text-silver)" }}>Extérieur</span>
                 </div>
               </div>
@@ -200,22 +217,29 @@ export default function Landing() {
                     Distribution de probabilité froide sur le résultat réglementaire final :
                   </p>
                   <div className="distrib-bar" style={{ height: "16px" }}>
-                    <div className="distrib-segment distrib-dom" style={{ width: "58%" }}></div>
-                    <div className="distrib-segment distrib-nul" style={{ width: "24%" }}></div>
-                    <div className="distrib-segment distrib-ext" style={{ width: "18%" }}></div>
+                    <div className="distrib-segment distrib-dom" style={{ width: "44%" }}></div>
+                    <div className="distrib-segment distrib-nul" style={{ width: "31%" }}></div>
+                    <div className="distrib-segment distrib-ext" style={{ width: "25%" }}></div>
                   </div>
-                  <div className="flex-between" style={{ fontFamily: "var(--font-title)", fontSize: "12px" }}>
+                  <div className="flex-between-responsive" style={{ fontFamily: "var(--font-title)", fontSize: "12px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <span style={{ display: "inline-block", width: "8px", height: "8px", backgroundColor: "var(--neon-green)", borderRadius: "1px" }}></span>
-                      <span>Real Madrid : 58%</span>
+                      <span style={{ 
+                        display: "inline-block", 
+                        width: "8px", 
+                        height: "8px", 
+                        backgroundColor: "var(--neon-green)", 
+                        borderRadius: "1px",
+                        boxShadow: "0 0 6px var(--neon-green)"
+                      }}></span>
+                      <span>Allemagne : 44%</span>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                       <span style={{ display: "inline-block", width: "8px", height: "8px", backgroundColor: "var(--text-silver)", borderRadius: "1px" }}></span>
-                      <span>Match Nul : 24%</span>
+                      <span>Match Nul : 31%</span>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                       <span style={{ display: "inline-block", width: "8px", height: "8px", backgroundColor: "var(--bg-technical)", border: "1px solid rgba(148, 163, 184, 0.3)", borderRadius: "1px" }}></span>
-                      <span>Bayern Munich : 18%</span>
+                      <span>Côte d'Ivoire : 25%</span>
                     </div>
                   </div>
                 </div>
@@ -226,19 +250,19 @@ export default function Landing() {
                   <div className="stat-bar-container">
                     <div className="stat-bar-labels">
                       <span>Plus de 2.5 Buts</span>
-                      <span style={{ color: "var(--neon-green)" }}>64%</span>
+                      <span style={{ color: "var(--neon-green)" }}>58%</span>
                     </div>
                     <div className="stat-bar-track">
-                      <div className="stat-bar-fill" style={{ width: "64%" }}></div>
+                      <div className="stat-bar-fill" style={{ width: "58%" }}></div>
                     </div>
                   </div>
                   <div className="stat-bar-container">
                     <div className="stat-bar-labels">
                       <span>Les deux équipes marquent (BTTS - Oui)</span>
-                      <span style={{ color: "var(--neon-green)" }}>71%</span>
+                      <span style={{ color: "var(--neon-green)" }}>64%</span>
                     </div>
                     <div className="stat-bar-track">
-                      <div className="stat-bar-fill" style={{ width: "71%" }}></div>
+                      <div className="stat-bar-fill" style={{ width: "64%" }}></div>
                     </div>
                   </div>
                 </div>
@@ -251,7 +275,7 @@ export default function Landing() {
                       <div className="card-title-tech" style={{ fontSize: "9px" }}>Arbitrage Recommandé (Risque Faible)</div>
                     </div>
                     <p style={{ color: "var(--text-white)", fontSize: "13px", fontWeight: 500 }}>
-                      Double chance : Real Madrid ou Nul & Plus de 1.5 buts cumulés.
+                      Double chance : Allemagne ou Nul & Plus de 1.5 buts cumulés.
                     </p>
                   </div>
                   <div className="card-tactical danger-seat-card" style={{ padding: "16px" }}>
@@ -259,7 +283,7 @@ export default function Landing() {
                       <div className="card-title-tech" style={{ fontSize: "9px", color: "var(--neon-red)" }}>Zone d'Exposition Élevée (À Éviter)</div>
                     </div>
                     <p style={{ color: "var(--text-white)", fontSize: "13px", fontWeight: 500 }}>
-                      Pari simple Bayern Munich sec. La modélisation montre une forte variance défensive extérieure.
+                      Pari simple Allemagne sec. La Côte d'Ivoire a dominé la première mi-temps et le match s'est joué sur un contre à la dernière minute.
                     </p>
                   </div>
                 </div>
@@ -276,7 +300,7 @@ export default function Landing() {
         backgroundColor: "rgba(18, 22, 32, 0.2)"
       }}>
         <div className="container">
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "30px" }}>
+          <div className="grid-three-cols">
             <div className="card-tactical">
               <div style={{ color: "var(--neon-green)", marginBottom: "16px" }}><Cpu size={24} /></div>
               <h3 style={{ fontSize: "16px", marginBottom: "8px" }}>1. Ingestion de données</h3>

@@ -181,7 +181,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: "30px" }}>
+        <div className="grid-dashboard">
           {/* COLONNE GAUCHE : ZONE DE SAISIE ET MATCHS CHAUDS */}
           <div style={{ display: "flex", flexDirection: "column", gap: "30px" }}>
             

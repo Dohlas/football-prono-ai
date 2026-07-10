@@ -42,6 +42,25 @@ export async function scrapeMatchData(matchUrl) {
     });
     await page.waitForTimeout(3000);
 
+    // Détection d'une éventuelle page 404 applicative de 365Scores (ordre des équipes inversé)
+    let pageText = await page.evaluate(() => document.body.innerText || "");
+    if (pageText.includes("Oups!") || pageText.includes("ne trouvons pas la page")) {
+      console.warn("[scraperService.js] Match non trouvé (404 applicatif 365Scores). Tentative de correction avec URL permutée...");
+      const swappedUrl = swapTeamIdsInUrl(matchUrl);
+      if (swappedUrl && swappedUrl !== matchUrl) {
+        console.log(`[scraperService.js] Nouvelle navigation vers : ${swappedUrl}`);
+        await page.goto(swappedUrl, { waitUntil: "domcontentloaded", timeout: 30000 });
+        await page.waitForLoadState("networkidle", { timeout: 20000 }).catch(() => {});
+        await page.waitForTimeout(3000);
+        pageText = await page.evaluate(() => document.body.innerText || "");
+        if (pageText.includes("Oups!") || pageText.includes("ne trouvons pas la page")) {
+          throw new Error("Match introuvable après permutation des identifiants.");
+        }
+      } else {
+        throw new Error("Match introuvable et permutation impossible.");
+      }
+    }
+
     const sections = [];
 
     // --- Section 1 : Aperçu général (page par défaut) ---
@@ -132,4 +151,49 @@ function cleanScrapedText(text) {
   }
 
   return deduped.join("\n");
+}
+
+/**
+ * Permute l'ordre des identifiants d'équipe et des noms d'équipe dans l'URL.
+ * Exemple : .../belgium-spain-2373-5050-5930#id=... -> .../belgium-spain-5050-2373-5930#id=...
+ * 
+ * @param {string} matchUrl
+ * @returns {string|null} URL permutée ou null si format invalide
+ */
+export function swapTeamIdsInUrl(matchUrl) {
+  try {
+    const urlObj = new URL(matchUrl);
+    urlObj.hash = ""; // Supprime le hash pour éviter les conflits de routage côté client
+    const pathname = urlObj.pathname;
+    const parts = pathname.split("/");
+    const lastPart = parts[parts.length - 1];
+
+    const slugParts = lastPart.split("-");
+    if (slugParts.length >= 3) {
+      const compId = slugParts[slugParts.length - 1];
+      const id2 = slugParts[slugParts.length - 2];
+      const id1 = slugParts[slugParts.length - 3];
+
+      if (!isNaN(compId) && !isNaN(id2) && !isNaN(id1)) {
+        // Permutation des deux IDs d'équipe
+        slugParts[slugParts.length - 2] = id1;
+        slugParts[slugParts.length - 3] = id2;
+
+        // Si le slug de nom a exactement deux parties, on les permute aussi
+        const namePartsCount = slugParts.length - 3;
+        if (namePartsCount === 2) {
+          const tempName = slugParts[0];
+          slugParts[0] = slugParts[1];
+          slugParts[1] = tempName;
+        }
+
+        parts[parts.length - 1] = slugParts.join("-");
+        urlObj.pathname = parts.join("/");
+        return urlObj.toString();
+      }
+    }
+  } catch (err) {
+    console.error("[scraperService.js] Erreur lors de la permutation des identifiants :", err.message);
+  }
+  return null;
 }

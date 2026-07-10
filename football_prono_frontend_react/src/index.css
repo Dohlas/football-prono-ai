@@ -261,7 +261,7 @@ a:hover {
   display: flex;
   height: 12px;
   border-radius: 3px;
-  overflow: hidden;
+  overflow: visible; /* Permet au glow fluorescent de dépasser */
   margin: 15px 0;
   background-color: var(--bg-technical);
 }
@@ -274,7 +274,9 @@ a:hover {
 
 .distrib-dom {
   background-color: var(--neon-green);
-  box-shadow: inset -1px 0 0 rgba(0,0,0,0.2);
+  border-top-left-radius: 3px;
+  border-bottom-left-radius: 3px;
+  box-shadow: 0 0 12px var(--neon-green), inset -1px 0 0 rgba(0,0,0,0.2);
 }
 
 .distrib-nul {
@@ -285,6 +287,8 @@ a:hover {
 .distrib-ext {
   background-color: var(--bg-technical);
   border: 1px solid rgba(148, 163, 184, 0.3);
+  border-top-right-radius: 3px;
+  border-bottom-right-radius: 3px;
 }
 
 /* Jauge circulaire (pour la confiance AI) */
@@ -436,4 +440,104 @@ a:hover {
 @keyframes blink-caret {
   from, to { border-color: transparent }
   50% { border-color: #39FF14; }
+}
+
+/* --- GRILLES & LAYOUTS RESPONSIVES --- */
+.grid-dashboard {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 30px;
+}
+
+@media (max-width: 1024px) {
+  .grid-dashboard {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
+
+.grid-report {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 30px;
+}
+
+@media (max-width: 1024px) {
+  .grid-report {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
+
+.grid-match-header {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1.5fr 1fr;
+  align-items: center;
+  gap: 24px;
+}
+
+@media (max-width: 900px) {
+  .grid-match-header {
+    grid-template-columns: 1fr;
+    text-align: center;
+    gap: 20px;
+  }
+  .grid-match-header > div {
+    text-align: center !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+}
+
+.grid-three-cols {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 30px;
+}
+
+@media (max-width: 768px) {
+  .grid-three-cols {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
+
+.grid-three-cols-small {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+@media (max-width: 600px) {
+  .grid-three-cols-small {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}
+
+.grid-two-cols {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+
+@media (max-width: 600px) {
+  .grid-two-cols {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+.flex-between-responsive {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+@media (max-width: 640px) {
+  .flex-between-responsive {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
 }

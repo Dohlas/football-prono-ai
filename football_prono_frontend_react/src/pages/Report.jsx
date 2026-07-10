@@ -88,13 +88,9 @@ export default function Report() {
       <main className="container" style={{ padding: "40px 24px", flex: 1 }}>
         
         {/* EN-TÊTE DU MATCH */}
-        <div className="card-tactical" style={{
+        <div className="card-tactical grid-match-header" style={{
           marginBottom: "30px",
           background: "linear-gradient(135deg, var(--bg-slate) 0%, rgba(30, 35, 48, 0.3) 100%)",
-          display: "grid",
-          gridTemplateColumns: "1.5fr 1fr 1.5fr 1fr",
-          alignItems: "center",
-          gap: "24px",
           padding: "30px"
         }}>
           {/* Équipe Domicile */}
@@ -154,7 +150,7 @@ export default function Report() {
         </div>
 
         {/* CONTENU EN GRILLE TACTIQUE */}
-        <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: "30px" }}>
+        <div className="grid-report">
           
           {/* COLONNE GAUCHE */}
           <div style={{ display: "flex", flexDirection: "column", gap: "30px" }}>
@@ -188,7 +184,7 @@ export default function Report() {
                 <div className="distrib-segment distrib-ext" style={{ width: `${prediction_json.resultat_1x2.victoire_exterieur}%` }}></div>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px", textAlign: "center" }}>
+              <div className="grid-three-cols-small" style={{ textAlign: "center" }}>
                 <div style={{ border: "1px solid var(--border-color)", padding: "12px", borderRadius: "4px" }}>
                   <span style={{ fontSize: "10px", textTransform: "uppercase", color: "var(--text-silver)" }}>Victoire Hôte (1)</span>
                   <strong style={{ display: "block", fontSize: "18px", color: "var(--neon-green)", marginTop: "4px" }}>
@@ -217,7 +213,7 @@ export default function Report() {
                 <span style={{ fontSize: "10px", color: "var(--text-silver)" }}>[FRÉQUENCES ESTIMÉES]</span>
               </div>
               
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
+              <div className="grid-two-cols">
                 <div>
                   <div className="stat-bar-container">
                     <div className="stat-bar-labels">
