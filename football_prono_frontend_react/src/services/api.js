@@ -35,11 +35,11 @@ function classifyEndpoint(endpoint) {
 function buildTimeoutMessage(category) {
   switch (category) {
     case "AUTH":
-      return "Le serveur met du temps à répondre (il sort probablement de veille). Veuillez réessayer dans quelques secondes.";
+      return "La connexion a pris trop de temps. Réessayez ?";
     case "ANALYSIS":
-      return "La requête a expiré (Timeout). Le traitement du match par l'IA a pris trop de temps. Réessayez ou vérifiez l'URL du match.";
+      return "L'analyse a pris trop de temps. Réessayez ou vérifiez le lien du match ?";
     default:
-      return "Le serveur n'a pas répondu à temps. Veuillez réessayer dans quelques instants.";
+      return "La connexion a pris trop de temps. Réessayez ?";
   }
 }
 
@@ -107,7 +107,7 @@ async function request(endpoint, options = {}) {
 
     // Erreur réseau brute (backend totalement injoignable)
     if (error instanceof TypeError && error.message.includes("fetch")) {
-      throw new Error("Impossible de joindre le serveur. Il est peut-être en cours de démarrage ou temporairement indisponible. Réessayez dans 30 secondes.");
+      throw new Error("Impossible de joindre le serveur. Réessayez dans quelques secondes ?");
     }
 
     // Conserver les erreurs déjà formatées par les blocs if (!response.ok) ci-dessus
