@@ -8,7 +8,7 @@ services:
     branch: main
     autoDeploy: true
     rootDir: football_prono_backend
-    buildCommand: rm -rf node_modules && npm install
+    buildCommand: rm -rf node_modules && npm install && npm rebuild sqlite3 --build-from-source
     startCommand: node index.js
     envVars:
       - key: PORT
