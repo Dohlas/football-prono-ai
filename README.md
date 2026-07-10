@@ -59,7 +59,7 @@ Les amateurs de football et parieurs perdent souvent des heures à recouper les 
 graph TD
     A[Utilisateur colle une URL de match 365Scores] -->|Flux HTTP avec SSE| B(Scraper Playwright Headless)
     B -->|Extraction HTML: stats, forme, confrontations| C(Génération du Prompt Structuré)
-    C -->|Appel API Gemini 1.5/2.0 Flash| D{Réponse JSON valide?}
+    C -->|Appel API Gemini 3.5/3 Flash| D{Réponse JSON valide?}
     D -->|Oui : Validation Schéma Zod| E[Création du rapport en base SQLite]
     D -->|Non : Parsing de Secours Regex| F[Validation Fallback / Gestion erreur]
     E --> G[Retour du résultat au client React]
