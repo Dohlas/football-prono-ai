@@ -135,7 +135,16 @@ export default function Dashboard() {
       }}>
         <div className="container flex-between" style={{ height: "65px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)" }}>
-            <div className="status-dot-active" style={{ width: "8px", height: "8px", backgroundColor: "var(--neon-green)", borderRadius: "50%", boxShadow: "0 0 8px var(--neon-green)" }}></div>
+            <img 
+              src="/logo.png" 
+              alt="Football Prono AI Logo" 
+              style={{
+                width: "22px",
+                height: "22px",
+                objectFit: "contain",
+                filter: "drop-shadow(0 0 4px rgba(16, 185, 129, 0.4))"
+              }}
+            />
             <span style={{ fontFamily: "var(--font-title)", fontWeight: 700, fontSize: "16px", color: "var(--text-white)" }}>
               TACTICAL TERMINAL
             </span>
@@ -268,36 +277,42 @@ export default function Dashboard() {
                   <div 
                     key={match.id}
                     onClick={() => handleAnalyze(match.url)}
-                    className="card-tactical card-tactical-interactive"
-                    style={{
-                      padding: "var(--space-md)",
-                      backgroundColor: "var(--bg-obsidian)",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      borderStyle: "dashed"
-                    }}
+                    className="double-bezel-outer double-bezel-outer-interactive"
+                    style={{ padding: "4px" }}
                   >
-                    <div>
-                      <span style={{ fontSize: "10px", color: "var(--text-silver)", textTransform: "uppercase", display: "block" }}>
-                        {match.league}
+                    <div
+                      className="double-bezel-inner"
+                      style={{
+                        padding: "var(--space-md)",
+                        backgroundColor: "var(--bg-obsidian)",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        border: "1px dashed var(--border-color)",
+                        borderRadius: "12px"
+                      }}
+                    >
+                      <div>
+                        <span style={{ fontSize: "10px", color: "var(--text-silver)", textTransform: "uppercase", display: "block" }}>
+                          {match.league}
+                        </span>
+                        <strong style={{ fontSize: "15px", color: "var(--text-white)", display: "flex", alignItems: "center", gap: "var(--space-sm)" }}>
+                          <TeamLogo teamName={match.home} size={20} />
+                          {match.home} <span style={{ color: "var(--text-silver)", fontSize: "12px", fontWeight: "normal" }}>vs</span> {match.away}
+                          <TeamLogo teamName={match.away} size={20} />
+                        </strong>
+                      </div>
+                      <span style={{
+                        color: "var(--neon-green)",
+                        fontSize: "11px",
+                        fontWeight: 700,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "var(--space-xs)"
+                      }}>
+                        LANCER <ArrowRight size={12} />
                       </span>
-                      <strong style={{ fontSize: "15px", color: "var(--text-white)", display: "flex", alignItems: "center", gap: "var(--space-sm)" }}>
-                        <TeamLogo teamName={match.home} size={20} />
-                        {match.home} <span style={{ color: "var(--text-silver)", fontSize: "12px", fontWeight: "normal" }}>vs</span> {match.away}
-                        <TeamLogo teamName={match.away} size={20} />
-                      </strong>
                     </div>
-                    <span style={{
-                      color: "var(--neon-green)",
-                      fontSize: "11px",
-                      fontWeight: 700,
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "var(--space-xs)"
-                    }}>
-                      LANCER <ArrowRight size={12} />
-                    </span>
                   </div>
                 ))}
               </div>

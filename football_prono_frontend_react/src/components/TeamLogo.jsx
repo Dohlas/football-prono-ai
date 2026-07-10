@@ -11,11 +11,10 @@ import { getTeamLogo, getFallbackAvatar } from '../utils/teamLogoResolver';
  * et déclenche automatiquement le niveau de fallback suivant.
  */
 export default function TeamLogo({ teamName, size = 60, style = {}, alt = '' }) {
-  const [logoUrl, setLogoUrl] = useState('');
+  const avatar = getFallbackAvatar(teamName);
+  const [logoUrl, setLogoUrl] = useState(avatar);
   const [fallbackStage, setFallbackStage] = useState(0);
   // 0 = dictionnaire local, 1 = TheSportsDB, 2 = avatar générique
-
-  const avatar = getFallbackAvatar(teamName);
 
   /**
    * Tente de résoudre le logo via TheSportsDB.

@@ -1,8 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useLocation, useParams, useNavigate, Link } from "react-router-dom";
 import { ChevronLeft, CornerDownRight, ShieldAlert, Zap } from "lucide-react";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { apiService } from "../services/api";
 import TeamLogo from "../components/TeamLogo";
+
+gsap.registerPlugin(ScrollTrigger);
 
 export default function Report() {
   const { id } = useParams();
@@ -12,6 +16,24 @@ export default function Report() {
   const [prediction, setPrediction] = useState(location.state?.prediction || null);
   const [loading, setLoading] = useState(!prediction);
   const [error, setError] = useState("");
+
+  // Refs pour cibler les éléments à animer
+  const mainRef = useRef(null);
+  const headerCardRef = useRef(null);
+  const gaugeRef = useRef(null);
+  const syntheseRef = useRef(null);
+  const cardsRef = useRef([]);
+  const distribBarRef = useRef(null);
+  const statBarsRef = useRef([]);
+  const listItemsRef = useRef([]);
+
+  cardsRef.current = [];
+  statBarsRef.current = [];
+  listItemsRef.current = [];
+
+  const addToCards = (el) => { if (el && !cardsRef.current.includes(el)) cardsRef.current.push(el); };
+  const addToStatBars = (el) => { if (el && !statBarsRef.current.includes(el)) statBarsRef.current.push(el); };
+  const addToListItems = (el) => { if (el && !listItemsRef.current.includes(el)) listItemsRef.current.push(el); };
 
   useEffect(() => {
     const loadPredictionFromHistory = async () => {
@@ -37,6 +59,163 @@ export default function Report() {
       loadPredictionFromHistory();
     }
   }, [id, prediction]);
+
+  // --- ANIMATIONS GSAP ---
+  // Invariant : toutes les animations sont enregistrées dans un contexte GSAP propre,
+  // nettoyé au démontage pour éviter les fuites mémoire.
+  useEffect(() => {
+    if (loading || error || !prediction) return;
+
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReducedMotion) return;
+
+    const ctx = gsap.context(() => {
+
+      // 1. ANIMATION D'ENTRÉE : EN-TÊTE DU MATCH
+      // Invariant : la carte header entre de bas en haut avec une légère rotation élastique.
+      if (headerCardRef.current) {
+        gsap.fromTo(
+          headerCardRef.current,
+          { y: 50, opacity: 0, scale: 0.97 },
+          {
+            y: 0, opacity: 1, scale: 1,
+            duration: 0.9,
+            ease: "power3.out",
+            clearProps: "transform,opacity"
+          }
+        );
+      }
+
+      // 2. ANIMATION JAUGE CIRCULAIRE SVG (trait qui se remplit avec élasticité)
+      // Invariant : le strokeDashoffset doit partir du périmètre complet et descendre à la valeur calculée.
+      if (gaugeRef.current) {
+        const circleFill = gaugeRef.current.querySelector(".circle-gauge-fill");
+        if (circleFill) {
+          const circumference = parseFloat(circleFill.getAttribute("stroke-dasharray") || "0");
+          const targetOffset = parseFloat(circleFill.style.strokeDashoffset || "0");
+          gsap.fromTo(
+            circleFill,
+            { strokeDashoffset: circumference },
+            {
+              strokeDashoffset: targetOffset,
+              duration: 1.6,
+              delay: 0.3,
+              ease: "elastic.out(1, 0.6)"
+            }
+          );
+        }
+      }
+
+      // 3. STAGGER D'ENTRÉE DES CARTES TACTIQUES (ScrollTrigger)
+      // Invariant : chaque carte apparaît séquentiellement à l'entrée dans le viewport.
+      if (cardsRef.current.length > 0) {
+        cardsRef.current.forEach((card, index) => {
+          gsap.fromTo(
+            card,
+            { y: 45, opacity: 0 },
+            {
+              y: 0, opacity: 1,
+              duration: 0.7,
+              ease: "power2.out",
+              clearProps: "transform,opacity",
+              scrollTrigger: {
+                trigger: card,
+                start: "top 88%",
+                toggleActions: "play none none none"
+              },
+              delay: (index % 2) * 0.1
+            }
+          );
+        });
+      }
+
+      // 4. BARRES DE PROBABILITÉ : REMPLISSAGE ANIMÉ AU SCROLL
+      // Invariant : chaque barre part de width: 0 et atteint sa valeur cible lors du scroll.
+      if (statBarsRef.current.length > 0) {
+        statBarsRef.current.forEach((bar) => {
+          const targetWidth = bar.style.width;
+          bar.style.width = "0%";
+          gsap.to(bar, {
+            width: targetWidth,
+            duration: 1.1,
+            ease: "power2.out",
+            scrollTrigger: {
+              trigger: bar,
+              start: "top 90%",
+              toggleActions: "play none none none"
+            }
+          });
+        });
+      }
+
+      // 5. BARRE DE DISTRIBUTION 1X2 ANIMÉE
+      // Invariant : la barre composite (dom/nul/ext) se remplit de gauche à droite.
+      if (distribBarRef.current) {
+        const segments = distribBarRef.current.querySelectorAll(".distrib-segment");
+        const widths = Array.from(segments).map((s) => s.style.width);
+        segments.forEach((s) => { s.style.width = "0%"; });
+        gsap.to(Array.from(segments), {
+          width: (i) => widths[i],
+          duration: 1.2,
+          ease: "power2.out",
+          stagger: 0.15,
+          scrollTrigger: {
+            trigger: distribBarRef.current,
+            start: "top 88%",
+            toggleActions: "play none none none"
+          }
+        });
+      }
+
+      // 6. SCRUBBING TEXTE SYNTHÈSE (opacity des mots 0.15 → 1.0 au scroll)
+      // Invariant : la synthèse doit être scindée en mots, chaque mot scrubbing au scroll.
+      if (syntheseRef.current) {
+        const spans = syntheseRef.current.querySelectorAll(".word-token");
+        if (spans.length > 0) {
+          gsap.fromTo(
+            spans,
+            { opacity: 0.1, color: "var(--text-silver)" },
+            {
+              opacity: 1,
+              color: "var(--text-white)",
+              stagger: 0.04,
+              ease: "none",
+              scrollTrigger: {
+                trigger: syntheseRef.current,
+                start: "top 75%",
+                end: "bottom 20%",
+                scrub: 1.2
+              }
+            }
+          );
+        }
+      }
+
+      // 7. HOVER PHYSICS : ITEMS DES LISTES DE PARIS
+      // Invariant : chaque item réagit à l'entrée de la souris avec un translateX de +6px.
+      if (listItemsRef.current.length > 0) {
+        listItemsRef.current.forEach((item) => {
+          const enterHandler = () => gsap.to(item, { x: 6, duration: 0.25, ease: "power2.out" });
+          const leaveHandler = () => gsap.to(item, { x: 0, duration: 0.35, ease: "power2.inOut" });
+          item.addEventListener("mouseenter", enterHandler);
+          item.addEventListener("mouseleave", leaveHandler);
+          // Stocker les handlers pour le nettoyage
+          item._gsapEnter = enterHandler;
+          item._gsapLeave = leaveHandler;
+        });
+      }
+
+    }, mainRef);
+
+    return () => {
+      // Nettoyage des handlers hover physiquement enregistrés sur les DOM nodes
+      listItemsRef.current.forEach((item) => {
+        if (item._gsapEnter) item.removeEventListener("mouseenter", item._gsapEnter);
+        if (item._gsapLeave) item.removeEventListener("mouseleave", item._gsapLeave);
+      });
+      ctx.revert();
+    };
+  }, [loading, error, prediction]);
 
   if (loading) {
     return (
@@ -65,8 +244,11 @@ export default function Report() {
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (confidencePercent / 100) * circumference;
 
+  // Scindage de la synthèse en mots pour le scrubbing GSAP
+  const syntheseWords = (prediction_json.synthese || "").split(/(\s+)/);
+
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+    <div ref={mainRef} style={{ minHeight: "100vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
       {/* HEADER RAPPORT */}
       <header style={{
         borderBottom: "1px solid var(--border-color)",
@@ -87,13 +269,17 @@ export default function Report() {
 
       {/* CONTENU PRINCIPAL */}
       <main className="container" style={{ padding: "40px 24px", flex: 1 }}>
-        
+
         {/* EN-TÊTE DU MATCH */}
-        <div className="card-tactical grid-match-header" style={{
-          marginBottom: "30px",
-          background: "linear-gradient(135deg, var(--bg-slate) 0%, rgba(30, 35, 48, 0.3) 100%)",
-          padding: "30px"
-        }}>
+        <div
+          ref={headerCardRef}
+          className="card-tactical grid-match-header"
+          style={{
+            marginBottom: "30px",
+            background: "linear-gradient(135deg, var(--bg-slate) 0%, rgba(30, 35, 48, 0.3) 100%)",
+            padding: "30px"
+          }}
+        >
           {/* Équipe Domicile */}
           <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
             <TeamLogo teamName={equipe_domicile} size={60} style={{ marginBottom: "8px" }} />
@@ -127,15 +313,15 @@ export default function Report() {
           </div>
 
           {/* Jauge Confiance */}
-          <div style={{ display: "flex", justifyContent: "center" }}>
+          <div ref={gaugeRef} style={{ display: "flex", justifyContent: "center" }}>
             <div className="circle-gauge-container">
               <svg className="circle-gauge-svg">
                 <circle className="circle-gauge-bg" cx="60" cy="60" r={radius} />
-                <circle 
-                  className="circle-gauge-fill" 
-                  cx="60" 
-                  cy="60" 
-                  r={radius} 
+                <circle
+                  className="circle-gauge-fill"
+                  cx="60"
+                  cy="60"
+                  r={radius}
                   strokeDasharray={circumference}
                   strokeDashoffset={strokeDashoffset}
                 />
@@ -152,34 +338,36 @@ export default function Report() {
 
         {/* CONTENU EN GRILLE TACTIQUE */}
         <div className="grid-report">
-          
+
           {/* COLONNE GAUCHE */}
           <div style={{ display: "flex", flexDirection: "column", gap: "30px" }}>
-            
+
             {/* SYNTHÈSE ANALYTIQUE */}
-            <div className="card-tactical">
+            <div ref={addToCards} className="card-tactical">
               <div className="card-header-tech">
                 <div className="card-title-tech">Synthèse de Modélisation Quantitative</div>
                 <span style={{ fontSize: "10px", color: "var(--text-silver)" }}>[RAPPORT TECHNIQUE]</span>
               </div>
-              <p style={{
-                fontSize: "14px",
-                lineHeight: "1.7",
-                color: "var(--text-white)",
-                whiteSpace: "pre-line"
-              }}>
-                {prediction_json.synthese}
+              <p
+                ref={syntheseRef}
+                style={{ fontSize: "14px", lineHeight: "1.7", color: "var(--text-white)" }}
+              >
+                {syntheseWords.map((word, i) =>
+                  /\s/.test(word)
+                    ? word
+                    : <span key={i} className="word-token" style={{ display: "inline" }}>{word}</span>
+                )}
               </p>
             </div>
 
             {/* 1X2 & PROBABILITÉS PRIMAIRES */}
-            <div className="card-tactical">
+            <div ref={addToCards} className="card-tactical">
               <div className="card-header-tech">
                 <div className="card-title-tech">Distribution de Probabilité Primaire (1X2)</div>
                 <span style={{ fontSize: "10px", color: "var(--neon-green)" }}>[CALCUL FROID]</span>
               </div>
-              
-              <div className="distrib-bar" style={{ height: "18px", marginBottom: "var(--layout-gap-grid)" }}>
+
+              <div ref={distribBarRef} className="distrib-bar" style={{ height: "18px", marginBottom: "var(--layout-gap-grid)" }}>
                 <div className="distrib-segment distrib-dom" style={{ width: `${prediction_json.resultat_1x2.victoire_domicile}%` }}></div>
                 <div className="distrib-segment distrib-nul" style={{ width: `${prediction_json.resultat_1x2.match_nul}%` }}></div>
                 <div className="distrib-segment distrib-ext" style={{ width: `${prediction_json.resultat_1x2.victoire_exterieur}%` }}></div>
@@ -208,12 +396,12 @@ export default function Report() {
             </div>
 
             {/* BUTS & BTTS */}
-            <div className="card-tactical">
+            <div ref={addToCards} className="card-tactical">
               <div className="card-header-tech">
                 <div className="card-title-tech">Seuils de Buts & BTTS (Both Teams To Score)</div>
                 <span style={{ fontSize: "10px", color: "var(--text-silver)" }}>[FRÉQUENCES ESTIMÉES]</span>
               </div>
-              
+
               <div className="grid-two-cols">
                 <div>
                   <div className="stat-bar-container">
@@ -222,7 +410,11 @@ export default function Report() {
                       <span style={{ color: "var(--neon-green)" }}>{prediction_json.plus_moins_2_5_buts.plus_de_2_5}%</span>
                     </div>
                     <div className="stat-bar-track">
-                      <div className="stat-bar-fill" style={{ width: `${prediction_json.plus_moins_2_5_buts.plus_de_2_5}%` }}></div>
+                      <div
+                        ref={addToStatBars}
+                        className="stat-bar-fill"
+                        style={{ width: `${prediction_json.plus_moins_2_5_buts.plus_de_2_5}%` }}
+                      ></div>
                     </div>
                   </div>
                   <div className="stat-bar-container">
@@ -231,7 +423,11 @@ export default function Report() {
                       <span style={{ color: "var(--text-white)" }}>{prediction_json.plus_moins_2_5_buts.moins_de_2_5}%</span>
                     </div>
                     <div className="stat-bar-track">
-                      <div className="stat-bar-fill" style={{ width: `${prediction_json.plus_moins_2_5_buts.moins_de_2_5}%`, backgroundColor: "var(--text-silver)", boxShadow: "none" }}></div>
+                      <div
+                        ref={addToStatBars}
+                        className="stat-bar-fill"
+                        style={{ width: `${prediction_json.plus_moins_2_5_buts.moins_de_2_5}%`, backgroundColor: "var(--text-silver)", boxShadow: "none" }}
+                      ></div>
                     </div>
                   </div>
                 </div>
@@ -243,7 +439,11 @@ export default function Report() {
                       <span style={{ color: "var(--neon-green)" }}>{prediction_json.les_deux_equipes_marquent.oui}%</span>
                     </div>
                     <div className="stat-bar-track">
-                      <div className="stat-bar-fill" style={{ width: `${prediction_json.les_deux_equipes_marquent.oui}%` }}></div>
+                      <div
+                        ref={addToStatBars}
+                        className="stat-bar-fill"
+                        style={{ width: `${prediction_json.les_deux_equipes_marquent.oui}%` }}
+                      ></div>
                     </div>
                   </div>
                   <div className="stat-bar-container">
@@ -252,7 +452,11 @@ export default function Report() {
                       <span style={{ color: "var(--text-white)" }}>{prediction_json.les_deux_equipes_marquent.non}%</span>
                     </div>
                     <div className="stat-bar-track">
-                      <div className="stat-bar-fill" style={{ width: `${prediction_json.les_deux_equipes_marquent.non}%`, backgroundColor: "var(--text-silver)", boxShadow: "none" }}></div>
+                      <div
+                        ref={addToStatBars}
+                        className="stat-bar-fill"
+                        style={{ width: `${prediction_json.les_deux_equipes_marquent.non}%`, backgroundColor: "var(--text-silver)", boxShadow: "none" }}
+                      ></div>
                     </div>
                   </div>
                 </div>
@@ -260,7 +464,7 @@ export default function Report() {
             </div>
 
             {/* BUTEURS PROBABLES */}
-            <div className="card-tactical">
+            <div ref={addToCards} className="card-tactical">
               <div className="card-header-tech">
                 <div className="card-title-tech">Distribution Individuelle (Buteurs Probables)</div>
                 <span style={{ fontSize: "10px", color: "var(--text-silver)" }}>[COTES MATHÉMATIQUES]</span>
@@ -276,7 +480,7 @@ export default function Report() {
                   </thead>
                   <tbody>
                     {prediction_json.buteurs_probables.map((scorer, idx) => (
-                      <tr key={idx}>
+                      <tr key={idx} style={{ transition: "background 0.2s ease" }}>
                         <td style={{ color: "var(--text-white)", fontWeight: 600 }}>{scorer.joueur}</td>
                         <td>{scorer.equipe}</td>
                         <td style={{ textAlign: "right", color: "var(--neon-green)", fontFamily: "var(--font-title)", fontWeight: 700 }}>
@@ -297,9 +501,9 @@ export default function Report() {
 
           {/* COLONNE DROITE */}
           <div style={{ display: "flex", flexDirection: "column", gap: "30px" }}>
-            
+
             {/* L'ARBITRAGE DE RISQUE (SAFE SEAT) */}
-            <div className="card-tactical safe-seat-card">
+            <div ref={addToCards} className="card-tactical safe-seat-card">
               <div className="card-header-tech" style={{ borderColor: "rgba(204, 255, 0, 0.15)" }}>
                 <div className="card-title-tech" style={{ color: "var(--neon-green)" }}>Arbitrage Recommandé (Risque Faible)</div>
                 <span style={{ fontSize: "9px", color: "var(--neon-green)", border: "1px solid rgba(204,255,0,0.3)", padding: "1px 6px", borderRadius: "3px" }}>
@@ -308,7 +512,7 @@ export default function Report() {
               </div>
               <ul style={{ display: "flex", flexDirection: "column", gap: "10px", paddingLeft: "10px" }}>
                 {prediction_json.paris_les_plus_surs.map((bet, idx) => (
-                  <li key={idx} style={{ color: "var(--text-white)", display: "flex", gap: "8px", alignItems: "center" }}>
+                  <li key={idx} ref={addToListItems} style={{ color: "var(--text-white)", display: "flex", gap: "8px", alignItems: "center", cursor: "default", willChange: "transform" }}>
                     <CornerDownRight size={14} style={{ color: "var(--neon-green)", flexShrink: 0 }} />
                     <span>{bet}</span>
                   </li>
@@ -317,7 +521,7 @@ export default function Report() {
             </div>
 
             {/* ZONE EXPOSITION ÉLEVÉE */}
-            <div className="card-tactical danger-seat-card">
+            <div ref={addToCards} className="card-tactical danger-seat-card">
               <div className="card-header-tech" style={{ borderColor: "rgba(255, 59, 48, 0.15)" }}>
                 <div className="card-title-tech" style={{ color: "var(--neon-red)" }}>Zone d'Exposition Élevée (À Éviter)</div>
                 <span style={{ fontSize: "9px", color: "var(--neon-red)", border: "1px solid rgba(255,59,48,0.3)", padding: "1px 6px", borderRadius: "3px" }}>
@@ -326,7 +530,7 @@ export default function Report() {
               </div>
               <ul style={{ display: "flex", flexDirection: "column", gap: "10px", paddingLeft: "10px" }}>
                 {prediction_json.paris_a_eviter.map((bet, idx) => (
-                  <li key={idx} style={{ color: "var(--text-white)", display: "flex", gap: "8px", alignItems: "center" }}>
+                  <li key={idx} ref={addToListItems} style={{ color: "var(--text-white)", display: "flex", gap: "8px", alignItems: "center", cursor: "default", willChange: "transform" }}>
                     <CornerDownRight size={14} style={{ color: "var(--neon-red)", flexShrink: 0 }} />
                     <span>{bet}</span>
                   </li>
@@ -335,16 +539,16 @@ export default function Report() {
             </div>
 
             {/* ESTIMATION CORNERS ET CARTONS */}
-            <div className="card-tactical">
+            <div ref={addToCards} className="card-tactical">
               <div className="card-header-tech">
                 <div className="card-title-tech">Micro-Métriques (Corners & Disciplinaire)</div>
                 <span style={{ fontSize: "10px", color: "var(--text-silver)" }}>[DISTRIBUTION]</span>
               </div>
-              
+
               <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                 {/* Corners */}
                 <div style={{ borderBottom: "1px solid var(--border-color)", paddingBottom: "12px" }}>
-                  <h4 style={{ fontSize: "12px", textTransform: "uppercase", marginBottom: "8px", color: "var(--text-white)" }}> Corners Estimés</h4>
+                  <h4 style={{ fontSize: "12px", textTransform: "uppercase", marginBottom: "8px", color: "var(--text-white)" }}>Corners Estimés</h4>
                   <div className="flex-between" style={{ fontSize: "13px", marginBottom: "6px" }}>
                     <span>{equipe_domicile}</span>
                     <strong style={{ color: "var(--text-white)" }}>{prediction_json.corners_estimes.domicile.total}</strong>
@@ -360,19 +564,31 @@ export default function Report() {
 
                 {/* Cartons */}
                 <div>
-                  <h4 style={{ fontSize: "12px", textTransform: "uppercase", marginBottom: "8px", color: "var(--text-white)" }}> Cartons Estimés</h4>
+                  <h4 style={{ fontSize: "12px", textTransform: "uppercase", marginBottom: "8px", color: "var(--text-white)" }}>Cartons Estimés</h4>
                   <div className="flex-between" style={{ fontSize: "13px", marginBottom: "6px" }}>
                     <span>{equipe_domicile}</span>
                     <span style={{ display: "flex", gap: "10px" }}>
-                      <span style={{ color: "#FFD700" }}>🟨 {prediction_json.cartons_estimes.domicile.jaunes}</span>
-                      <span style={{ color: "var(--neon-red)" }}>🟥 {prediction_json.cartons_estimes.domicile.rouges}</span>
+                      <span style={{ color: "#FFD700" }}>
+                        <span aria-hidden="true" style={{ display: "inline-block", width: "10px", height: "14px", backgroundColor: "#FFD700", borderRadius: "2px", verticalAlign: "middle", marginRight: "4px" }}></span>
+                        {prediction_json.cartons_estimes.domicile.jaunes}
+                      </span>
+                      <span style={{ color: "var(--neon-red)" }}>
+                        <span aria-hidden="true" style={{ display: "inline-block", width: "10px", height: "14px", backgroundColor: "var(--neon-red)", borderRadius: "2px", verticalAlign: "middle", marginRight: "4px" }}></span>
+                        {prediction_json.cartons_estimes.domicile.rouges}
+                      </span>
                     </span>
                   </div>
                   <div className="flex-between" style={{ fontSize: "13px" }}>
                     <span>{equipe_exterieur}</span>
                     <span style={{ display: "flex", gap: "10px" }}>
-                      <span style={{ color: "#FFD700" }}>🟨 {prediction_json.cartons_estimes.exterieur.jaunes}</span>
-                      <span style={{ color: "var(--neon-red)" }}>🟥 {prediction_json.cartons_estimes.exterieur.rouges}</span>
+                      <span style={{ color: "#FFD700" }}>
+                        <span aria-hidden="true" style={{ display: "inline-block", width: "10px", height: "14px", backgroundColor: "#FFD700", borderRadius: "2px", verticalAlign: "middle", marginRight: "4px" }}></span>
+                        {prediction_json.cartons_estimes.exterieur.jaunes}
+                      </span>
+                      <span style={{ color: "var(--neon-red)" }}>
+                        <span aria-hidden="true" style={{ display: "inline-block", width: "10px", height: "14px", backgroundColor: "var(--neon-red)", borderRadius: "2px", verticalAlign: "middle", marginRight: "4px" }}></span>
+                        {prediction_json.cartons_estimes.exterieur.rouges}
+                      </span>
                     </span>
                   </div>
                 </div>
@@ -395,7 +611,7 @@ export default function Report() {
         color: "rgba(148, 163, 184, 0.4)"
       }}>
         <div className="container flex-between">
-          <span>Rapport Tactique v3.5 - Confidentialité Quant.</span>
+          <span>Rapport Tactique - Confidentialité Quant.</span>
           <span>Données issues d'un arbitrage froid et rigoureux.</span>
         </div>
       </footer>
