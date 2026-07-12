@@ -198,7 +198,9 @@ export default function Auth() {
             style={{ width: "100%", marginTop: "10px" }}
             disabled={submitting}
           >
-            {submitting ? "Traitement cryptographique..." : (isRegister ? "Activer l'accès gratuit" : "Entrer dans le terminal")}
+            <span className="btn-neon-content">
+              {submitting ? "Traitement cryptographique..." : (isRegister ? "Activer l'accès gratuit" : "Entrer dans le terminal")}
+            </span>
           </button>
         </form>
 

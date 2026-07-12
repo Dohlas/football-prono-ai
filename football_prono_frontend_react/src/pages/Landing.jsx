@@ -325,13 +325,13 @@ export default function Landing() {
           <nav style={{ display: "flex", gap: "24px", alignItems: "center" }}>
             {isAuthenticated ? (
               <Link to="/dashboard" className="btn-neon" style={{ padding: "8px 16px", fontSize: "12px" }}>
-                Accéder au Terminal <ChevronRight size={14} />
+                <span className="btn-neon-content">Accéder au Terminal <ChevronRight size={14} /></span>
               </Link>
             ) : (
               <>
                 <Link to="/auth" style={{ color: "var(--text-white)", fontWeight: 500 }}>Connexion</Link>
                 <Link to="/auth?register=true" className="btn-neon" style={{ padding: "8px 16px", fontSize: "12px" }}>
-                  Terminal Gratuit <ChevronRight size={14} />
+                  <span className="btn-neon-content">Terminal Gratuit <ChevronRight size={14} /></span>
                 </Link>
               </>
             )}
@@ -374,7 +374,7 @@ export default function Landing() {
           </p>
           <div className="hero-cta" style={{ display: "flex", gap: "16px", justifyContent: "center" }}>
             <Link to={isAuthenticated ? "/dashboard" : "/auth"} className="btn-neon">
-              Lancer le terminal d'analyse <ChevronRight size={16} />
+              <span className="btn-neon-content">Lancer le terminal d'analyse <ChevronRight size={16} /></span>
             </Link>
           </div>
           <div className="hero-proof" style={{ display: "flex", justifyContent: "center", marginTop: "40px" }}>
@@ -681,7 +681,7 @@ export default function Landing() {
           </p>
           <div style={{ display: "flex", gap: "16px", justifyContent: "center", flexWrap: "wrap" }}>
             <Link to={isAuthenticated ? "/dashboard" : "/auth?register=true"} className="btn-neon">
-              Créer un compte gratuit <ChevronRight size={16} />
+              <span className="btn-neon-content">Créer un compte gratuit <ChevronRight size={16} /></span>
             </Link>
             {!isAuthenticated && (
               <Link to="/auth" className="btn-outline">

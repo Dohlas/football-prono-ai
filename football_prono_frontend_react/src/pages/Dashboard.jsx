@@ -258,7 +258,7 @@ export default function Dashboard() {
                   style={{ whiteSpace: "nowrap" }}
                   disabled={!matchUrl.trim()}
                 >
-                  <Search size={14} /> Analyser
+                  <span className="btn-neon-content"><Search size={14} /> Analyser</span>
                 </button>
               </div>
             </div>

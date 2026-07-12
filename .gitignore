@@ -5,6 +5,8 @@ football_prono_backend/npm-debug.log
 football_prono_backend/logs/
 football_prono_backend/*.sqlite
 football_prono_backend/*.sqlite-journal
+football_prono_backend/scraped_*.json
+football_prono_backend/scraped_*.txt
 
 # --- Frontend React ---
 football_prono_frontend_react/node_modules/
