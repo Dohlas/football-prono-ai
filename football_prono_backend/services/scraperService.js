@@ -32,6 +32,23 @@ export async function scrapeMatchData(matchUrl) {
       viewport: { width: 1366, height: 900 },
     });
 
+    // Bloquer les publicités et traqueurs pour éviter les overlays qui perturbent les clics
+    await context.route("**/*", (route) => {
+      const url = route.request().url().toLowerCase();
+      if (
+        url.includes("googleads") ||
+        url.includes("doubleclick") ||
+        url.includes("adservice") ||
+        url.includes("vignette") ||
+        url.includes("analytics") ||
+        url.includes("adsbygoogle")
+      ) {
+        route.abort();
+      } else {
+        route.continue();
+      }
+    });
+
     const page = await context.newPage();
 
     console.log(`[scraperService.js] Ouverture de la page : ${matchUrl}`);
@@ -69,28 +86,49 @@ export async function scrapeMatchData(matchUrl) {
 
     // --- Sections suivantes : onglets Stats / H2H / Classement ---
     const tabsToTry = [
-      { search: ["Stats", "Statistiques"], label: "STATISTIQUES DU MATCH" },
-      { search: ["H2H", "Face à face", "Face-à-face"], label: "HISTORIQUE FACE-À-FACE" },
-      { search: ["Standings", "Classement"], label: "CLASSEMENT DE LA COMPÉTITION" },
-      { search: ["Lineups", "Compositions"], label: "COMPOSITIONS D'ÉQUIPE" },
-      { search: ["Form", "Forme"], label: "FORME RÉCENTE DES ÉQUIPES" },
+      { id: "#navigation-tabs_game-center_stats", search: ["Stats", "Statistiques"], label: "STATISTIQUES DU MATCH" },
+      { id: "#navigation-tabs_game-center_h2h", search: ["H2H", "Face à face", "Face-à-face"], label: "HISTORIQUE FACE-À-FACE" },
+      { id: "#navigation-tabs_game-center_standings", search: ["Standings", "Classement"], label: "CLASSEMENT DE LA COMPÉTITION" },
+      { id: "#navigation-tabs_game-center_lineups", search: ["Lineups", "Compositions"], label: "COMPOSITIONS D'ÉQUIPE" },
+      { id: "#navigation-tabs_game-center_form", search: ["Form", "Forme"], label: "FORME RÉCENTE DES ÉQUIPES" },
     ];
 
     for (const tab of tabsToTry) {
-      for (const label of tab.search) {
+      let clicked = false;
+      
+      // 1. Essai avec le sélecteur d'ID précis de 365Scores
+      if (tab.id) {
         try {
-          const tabElement = page.getByText(label, { exact: false }).first();
-          if (await tabElement.isVisible({ timeout: 1500 })) {
+          const tabElement = page.locator(tab.id);
+          if (await tabElement.isVisible({ timeout: 1000 })) {
             await tabElement.click({ timeout: 1500 });
-            await page.waitForTimeout(1200);
-
-            const sectionText = await page.evaluate(() => document.body.innerText || "");
-            sections.push({ label: tab.label, text: sectionText });
-            break;
+            clicked = true;
           }
         } catch {
-          // Onglet non visible ou erreur de clic, on passe au suivant
+          // En cas d'erreur de clic sur l'ID, on tente le fallback par texte
         }
+      }
+
+      // 2. Repli (fallback) par texte si le clic par ID n'a pas réussi
+      if (!clicked) {
+        for (const label of tab.search) {
+          try {
+            const tabElement = page.getByText(label, { exact: false }).first();
+            if (await tabElement.isVisible({ timeout: 1000 })) {
+              await tabElement.click({ timeout: 1500 });
+              clicked = true;
+              break;
+            }
+          } catch {
+            // Suivant
+          }
+        }
+      }
+
+      if (clicked) {
+        await page.waitForTimeout(1200);
+        const sectionText = await page.evaluate(() => document.body.innerText || "");
+        sections.push({ label: tab.label, text: sectionText });
       }
     }
 
