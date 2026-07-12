@@ -2,17 +2,22 @@
 football_prono_backend/node_modules/
 football_prono_backend/.env
 football_prono_backend/npm-debug.log
+football_prono_backend/logs/
+football_prono_backend/*.sqlite
+football_prono_backend/*.sqlite-journal
+football_prono_backend/scraped_*.json
+football_prono_backend/scraped_*.txt
 
-# --- Frontend Flutter ---
-football_prono_frontend/.dart_tool/
-football_prono_frontend/.flutter-plugins
-football_prono_frontend/.flutter-plugins-dependencies
-football_prono_frontend/.packages
-football_prono_frontend/build/
-football_prono_frontend/.idea/
-football_prono_frontend/*.iml
-football_prono_frontend/android/.gradle/
-football_prono_frontend/pubspec.lock
+# --- Frontend React ---
+football_prono_frontend_react/node_modules/
+football_prono_frontend_react/dist/
+football_prono_frontend_react/.env
+football_prono_frontend_react/.env.local
+football_prono_frontend_react/.env.*.local
+
+# --- Graphify ---
+graphify-out/
+graphify.config.json
 
 # --- Général ---
 .DS_Store

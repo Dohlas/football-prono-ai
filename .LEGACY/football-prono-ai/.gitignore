@@ -1,0 +1,19 @@
+# --- Backend Node.js ---
+football_prono_backend/node_modules/
+football_prono_backend/.env
+football_prono_backend/npm-debug.log
+
+# --- Frontend Flutter ---
+football_prono_frontend/.dart_tool/
+football_prono_frontend/.flutter-plugins
+football_prono_frontend/.flutter-plugins-dependencies
+football_prono_frontend/.packages
+football_prono_frontend/build/
+football_prono_frontend/.idea/
+football_prono_frontend/*.iml
+football_prono_frontend/android/.gradle/
+football_prono_frontend/pubspec.lock
+
+# --- Général ---
+.DS_Store
+Thumbs.db

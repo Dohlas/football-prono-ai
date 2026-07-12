@@ -1,0 +1,39 @@
+services:
+  # ----------------------------------------------------
+  # Service Backend (API Express + SQLite)
+  # ----------------------------------------------------
+  - type: web
+    name: football-prono-backend
+    env: docker
+    branch: main
+    autoDeploy: true
+    rootDir: football_prono_backend
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: NODE_ENV
+        value: production
+      - key: GEMINI_API_KEY
+        sync: false # À configurer dans le tableau de bord Render avec votre clé API Gemini
+      - key: JWT_SECRET
+        generateValue: true # Clé JWT sécurisée auto-générée par Render
+    # Note : Le stockage persistant (disk) a été retiré pour rester 100% sur l'offre gratuite (Free Tier).
+    # Les données SQLite seront stockées sur le disque éphémère du conteneur.
+
+  # ----------------------------------------------------
+  # Service Frontend (Vite React)
+  # ----------------------------------------------------
+  - type: static
+    name: football-prono-frontend
+    env: static
+    branch: main
+    autoDeploy: true
+    rootDir: football_prono_frontend_react
+    buildCommand: npm install && npm run build
+    publishDir: dist
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: football-prono-backend
+          property: host
