@@ -1,5 +1,5 @@
 import { scrapeMatchData } from "../services/scraperService.js";
-import { callAIModel, parseAIResponse } from "../services/aiService.js";
+import { callAIModel, parseAIResponse, cleanScrapedData } from "../services/aiService.js";
 import {
   createPrediction,
   getPredictionsByUserId,
@@ -115,8 +115,11 @@ export async function analyzeMatch(req, res) {
       sendProgress("status", { step: "scraping", message: "On récupère les statistiques du match sur 365Scores..." });
       const scrapedText = await scrapeMatchData(matchUrl);
 
+      sendProgress("status", { step: "clean", message: "On nettoie et on filtre les données du match..." });
+      const cleanedText = await cleanScrapedData(scrapedText);
+
       sendProgress("status", { step: "ai", message: "On calcule les probabilités et on projette les résultats..." });
-      const rawAiText = await callAIModel(scrapedText);
+      const rawAiText = await callAIModel(cleanedText);
 
       sendProgress("status", { step: "parsing", message: "On valide et on formate l'analyse..." });
       const predictionData = parseAIResponse(rawAiText);
@@ -148,7 +151,8 @@ export async function analyzeMatch(req, res) {
       console.log(`[predController] Analyse sync — user:${userId} url:${matchUrl}`);
 
       const scrapedText = await scrapeMatchData(matchUrl);
-      const rawAiText = await callAIModel(scrapedText);
+      const cleanedText = await cleanScrapedData(scrapedText);
+      const rawAiText = await callAIModel(cleanedText);
       const predictionData = parseAIResponse(rawAiText);
 
       const savedPrediction = await createPrediction(

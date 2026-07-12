@@ -105,8 +105,27 @@ export const predictionResponseSchema = z.object({
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Registre des modèles par défaut et alternatifs par fournisseur d'IA
+const PROVIDER_MODELS = {
+  gemini: {
+    default: process.env.GEMINI_MODEL || "gemini-3.5-flash",
+    alternatives: ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-1.5-flash", "gemini-1.5-pro"]
+  },
+  openai: {
+    default: process.env.OPENAI_MODEL || "gpt-4o-mini",
+    alternatives: ["gpt-4o", "gpt-3.5-turbo", "gpt-4-turbo"]
+  },
+  anthropic: {
+    default: process.env.ANTHROPIC_MODEL || "claude-3-5-haiku-latest",
+    alternatives: ["claude-3-5-sonnet-latest", "claude-3-opus-20240229", "claude-3-haiku-20240307"]
+  }
+};
+
 // Cache mémoire pour le prompt système
 let systemPromptCache = null;
+
+// Cache mémoire pour le prompt de nettoyage
+let cleanPromptCache = null;
 
 /**
  * Charge le prompt système de manière asynchrone et le met en cache.
@@ -128,8 +147,89 @@ export async function getSystemPrompt() {
 }
 
 /**
+ * Charge le prompt de nettoyage de manière asynchrone et le met en cache.
+ */
+export async function getCleanPrompt() {
+  if (cleanPromptCache) {
+    return cleanPromptCache;
+  }
+  
+  const promptPath = path.resolve(__dirname, "../prompts/clean_prompt.md");
+  try {
+    const data = await fs.readFile(promptPath, "utf-8");
+    cleanPromptCache = data.trim();
+    return cleanPromptCache;
+  } catch (error) {
+    console.error("[aiService.js] Erreur lors du chargement du prompt de nettoyage :", error.message);
+    throw new Error(`Impossible de charger le prompt de nettoyage : ${error.message}`);
+  }
+}
+
+/**
+ * Nettoie les données textuelles du match à l'aide d'un modèle rapide et léger de Gemini.
+ * 
+ * @param {string} scrapedData - Les données brutes récupérées par le scraper
+ * @returns {Promise<string>} Les données nettoyées
+ */
+export async function cleanScrapedData(scrapedData) {
+  if (!scrapedData || !scrapedData.trim()) {
+    return "";
+  }
+
+  if (process.env.NODE_ENV === "test") {
+    return scrapedData;
+  }
+
+  const cleanPrompt = await getCleanPrompt();
+  const systemInstruction = cleanPrompt;
+  const userPrompt = `<raw_text>\n${scrapedData}\n</raw_text>`;
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error("Clé d'API GEMINI_API_KEY non configurée pour le nettoyage.");
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
+  
+  // Modèles de nettoyage ordonnés (du plus rapide au plus stable)
+  const cleanModels = [
+    process.env.GEMINI_CLEAN_MODEL || "gemini-2.5-flash",
+    "gemini-1.5-flash",
+    "gemini-2.5-pro",
+    "gemini-1.5-pro"
+  ];
+
+  let lastError = null;
+  for (const modelId of cleanModels) {
+    try {
+      console.log(`[aiService.js] Nettoyage : Tentative avec ${modelId}`);
+      const response = await ai.models.generateContent({
+        model: modelId,
+        contents: userPrompt,
+        config: {
+          systemInstruction: systemInstruction,
+          temperature: 0.0,
+        }
+      });
+      
+      const cleanedText = response.text;
+      const match = cleanedText.match(/<cleaned_text>([\s\S]*?)<\/cleaned_text>/);
+      return match ? match[1].trim() : cleanedText.trim();
+    } catch (err) {
+      console.warn(`[aiService.js] ❌ Nettoyage : Échec avec le modèle ${modelId} : ${err.message}`);
+      lastError = err;
+    }
+  }
+
+  // Fallback ultime : si l'IA échoue complètement à nettoyer, on retourne le texte brut pour ne pas bloquer le flux
+  console.error("[aiService.js] ⚠️ Le nettoyage IA a complètement échoué. Utilisation des données brutes en secours.", lastError ? lastError.message : "");
+  return scrapedData;
+}
+
+/**
  * Dispatcher d'IA universel : envoie la requête vers le provider sélectionné.
  * Par défaut, utilise Google Gemini.
+ * Gère le fallback automatique des modèles sur la même clé API en cas d'échec.
  * 
  * @param {string} scrapedData - Les données textuelles du match
  * @param {string} provider - Le provider ('gemini' | 'openai' | 'anthropic')
@@ -214,79 +314,101 @@ export async function callAIModel(scrapedData, provider = "gemini") {
 
   const selectedProvider = process.env.AI_PROVIDER || provider;
   
-  console.log(`[aiService.js] Appel du modèle via le provider : ${selectedProvider}`);
+  console.log(`[aiService.js] Dispatcher IA — provider : ${selectedProvider}`);
 
-  if (selectedProvider === "gemini") {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      throw new Error("Clé d'API GEMINI_API_KEY non configurée.");
+  const config = PROVIDER_MODELS[selectedProvider.toLowerCase()];
+  if (!config) {
+    throw new Error(`Provider d'IA non supporté : ${selectedProvider}`);
+  }
+
+  // On construit la liste des modèles à tenter : le modèle configuré en premier, puis les alternatives uniques
+  const modelsToTry = [config.default];
+  for (const alt of config.alternatives) {
+    if (alt !== config.default) {
+      modelsToTry.push(alt);
     }
-    const ai = new GoogleGenAI({ apiKey });
-    
-    // Configuration de Gemini 3.5 Flash avec support du raisonnement si activé
-    const response = await ai.models.generateContent({
-      model: process.env.GEMINI_MODEL || "gemini-3.5-flash",
-      contents: userPrompt,
-      config: {
-        systemInstruction: systemInstruction,
-        temperature: 0.1, // température basse pour des calculs froids
-        thinkingConfig: {
-          thinkingBudget: 20000,
-          includeThoughts: false
+  }
+
+  let lastError = null;
+
+  for (const modelId of modelsToTry) {
+    try {
+      console.log(`[aiService.js] Tentative d'analyse avec le modèle : ${modelId} (${selectedProvider})`);
+      if (selectedProvider === "gemini") {
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (!apiKey) {
+          throw new Error("Clé d'API GEMINI_API_KEY non configurée.");
         }
+        const ai = new GoogleGenAI({ apiKey });
+        
+        const response = await ai.models.generateContent({
+          model: modelId,
+          contents: userPrompt,
+          config: {
+            systemInstruction: systemInstruction,
+            temperature: 0.1,
+            // Seulement inclure thinkingConfig si le modèle est gemini-3.5-flash ou pro
+            ...(modelId.includes("3.5") ? {
+              thinkingConfig: {
+                thinkingBudget: 20000,
+                includeThoughts: false
+              }
+            } : {})
+          }
+        });
+
+        return response.text;
+      } 
+      
+      else if (selectedProvider === "openai") {
+        const apiKey = process.env.OPENAI_API_KEY;
+        if (!apiKey) {
+          throw new Error("Clé d'API OPENAI_API_KEY non configurée pour le mode OpenAI.");
+        }
+        
+        const { default: OpenAI } = await import("openai");
+        const openai = new OpenAI({ apiKey });
+        
+        const response = await openai.chat.completions.create({
+          model: modelId,
+          messages: [
+            { role: "system", content: systemInstruction },
+            { role: "user", content: userPrompt }
+          ],
+          temperature: 0.1,
+        });
+        
+        return response.choices[0].message.content;
       }
-    });
-
-    return response.text;
-  } 
-  
-  else if (selectedProvider === "openai") {
-    // OpenAI Fallback Dispatcher
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      throw new Error("Clé d'API OPENAI_API_KEY non configurée pour le mode OpenAI.");
+      
+      else if (selectedProvider === "anthropic") {
+        const apiKey = process.env.ANTHROPIC_API_KEY;
+        if (!apiKey) {
+          throw new Error("Clé d'API ANTHROPIC_API_KEY non configurée pour le mode Anthropic.");
+        }
+        
+        const { default: Anthropic } = await import("@anthropic-ai/sdk");
+        const anthropic = new Anthropic({ apiKey });
+        
+        const response = await anthropic.messages.create({
+          model: modelId,
+          max_tokens: 4000,
+          system: systemInstruction,
+          messages: [
+            { role: "user", content: userPrompt }
+          ],
+          temperature: 0.1,
+        });
+        
+        return response.content[0].text;
+      }
+    } catch (err) {
+      console.warn(`[aiService.js] ❌ Échec avec le modèle ${modelId} (${selectedProvider}) : ${err.message}`);
+      lastError = err;
     }
-    
-    // Importation dynamique pour éviter de charger le package si non utilisé
-    const { default: OpenAI } = await import("openai");
-    const openai = new OpenAI({ apiKey });
-    
-    const response = await openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL || "gpt-4o-mini",
-      messages: [
-        { role: "system", content: systemInstruction },
-        { role: "user", content: userPrompt }
-      ],
-      temperature: 0.1,
-    });
-    
-    return response.choices[0].message.content;
-  }
-  
-  else if (selectedProvider === "anthropic") {
-    // Anthropic Fallback Dispatcher
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      throw new Error("Clé d'API ANTHROPIC_API_KEY non configurée pour le mode Anthropic.");
-    }
-    
-    const { default: Anthropic } = await import("@anthropic-ai/sdk");
-    const anthropic = new Anthropic({ apiKey });
-    
-    const response = await anthropic.messages.create({
-      model: process.env.ANTHROPIC_MODEL || "claude-3-5-haiku-latest",
-      max_tokens: 4000,
-      system: systemInstruction,
-      messages: [
-        { role: "user", content: userPrompt }
-      ],
-      temperature: 0.1,
-    });
-    
-    return response.content[0].text;
   }
 
-  throw new Error(`Provider d'IA non supporté : ${selectedProvider}`);
+  throw new Error(`Tous les modèles pour le provider ${selectedProvider} ont échoué. Dernière erreur : ${lastError ? lastError.message : 'inconnue'}`);
 }
 
 /**
